@@ -18,7 +18,8 @@
 #define _VARIABLES_HEADER_
 
 #define TW_MAIN_VERSION_STR       "3.2.3"
-#define TW_VERSION_STR TW_MAIN_VERSION_STR TW_DEVICE_VERSION
+#define TW_MAINTAINER_VERSION_STR "-codeworkx"
+#define TW_VERSION_STR TW_MAIN_VERSION_STR TW_DEVICE_VERSION TW_MAINTAINER_VERSION_STR
 
 #define TW_USE_COMPRESSION_VAR      "tw_use_compression"
 #define TW_FILENAME                 "tw_filename"
