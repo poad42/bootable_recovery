@@ -24,6 +24,13 @@ else
     ifeq ($(LOCAL_PATH),bootable/recovery)
         PROJECT_PATH_AGREES := true
         BOARD_SEPOLICY_DIRS += bootable/recovery/sepolicy
+    else
+        ifeq ($(LOCAL_PATH),bootable/recovery-twrp)
+            ifeq ($(RECOVERY_VARIANT),twrp)
+                PROJECT_PATH_AGREES := true
+                BOARD_SEPOLICY_DIRS += bootable/recovery-twrp/sepolicy
+            endif
+        endif
     endif
 endif
 
@@ -32,6 +39,10 @@ ifeq ($(PROJECT_PATH_AGREES),true)
 ifneq (,$(filter $(PLATFORM_SDK_VERSION), 21 22))
 # Make recovery domain permissive for TWRP
     BOARD_SEPOLICY_UNION += twrp.te
+endif
+
+ifeq ($(CM_PLATFORM_SDK_VERSION),)
+    CM_PLATFORM_SDK_VERSION := 0
 endif
 
 include $(CLEAR_VARS)
@@ -46,6 +57,7 @@ ifneq ($(TW_DEVICE_VERSION),)
 else
     LOCAL_CFLAGS += -DTW_DEVICE_VERSION='"-0"'
 endif
+LOCAL_CFLAGS += -DPLATFORM_SDK_VERSION=$(PLATFORM_SDK_VERSION)
 
 TW_DATE_STR := $(shell date -u +%Y%m%d)
 LOCAL_CFLAGS += -DTW_DATE_STR='"-$(TW_DATE_STR)"'
@@ -177,18 +189,10 @@ ifeq ($(TARGET_USERIMAGES_USE_EXT4), true)
 endif
 LOCAL_C_INCLUDES += external/libselinux/include
 LOCAL_SHARED_LIBRARIES += libselinux
-#ifneq ($(TARGET_USERIMAGES_USE_EXT4), true)
-#    LOCAL_CFLAGS += -DUSE_EXT4
-#    LOCAL_C_INCLUDES += system/extras/ext4_utils
-#    LOCAL_SHARED_LIBRARIES += libext4_utils
-#    ifneq ($(wildcard external/lz4/Android.mk),)
-#        LOCAL_STATIC_LIBRARIES += liblz4
-#    endif
-#endif
 
 ifeq ($(AB_OTA_UPDATER),true)
     LOCAL_CFLAGS += -DAB_OTA_UPDATER=1
-    LOCAL_SHARED_LIBRARIES += libhardware
+    LOCAL_SHARED_LIBRARIES += libhardware android.hardware.boot@1.0
     LOCAL_REQUIRED_MODULES += libhardware
 endif
 
@@ -213,9 +217,19 @@ ifeq ($(shell git -C $(LOCAL_PATH) diff --quiet; echo $$?),1)
 endif
 LOCAL_CFLAGS += -DTW_GIT_REVISION='"$(tw_git_revision)"'
 
+ifeq ($(shell test $(PLATFORM_SDK_VERSION) -ge 28; echo $$?),0)
+ifeq ($(TW_EXCLUDE_MTP),)
+    LOCAL_SHARED_LIBRARIES += libtwrpmtp-ffs
+endif
+else
+ifeq ($(TW_EXCLUDE_MTP),)
+    LOCAL_CFLAGS += -DTW_HAS_LEGACY_MTP
+    LOCAL_SHARED_LIBRARIES += libtwrpmtp-legacy
+endif
+endif
+
 #TWRP Build Flags
 ifeq ($(TW_EXCLUDE_MTP),)
-    LOCAL_SHARED_LIBRARIES += libtwrpmtp
     LOCAL_CFLAGS += -DTW_HAS_MTP
 endif
 ifneq ($(TW_NO_SCREEN_TIMEOUT),)
@@ -284,6 +298,9 @@ endif
 ifeq ($(TW_HAS_DOWNLOAD_MODE), true)
     LOCAL_CFLAGS += -DTW_HAS_DOWNLOAD_MODE
 endif
+ifeq ($(TW_HAS_EDL_MODE), true)
+    LOCAL_CFLAGS += -DTW_HAS_EDL_MODE
+endif
 ifeq ($(TW_NO_SCREEN_BLANK), true)
     LOCAL_CFLAGS += -DTW_NO_SCREEN_BLANK
 endif
@@ -296,6 +313,9 @@ endif
 ifeq ($(TW_NO_EXFAT_FUSE), true)
     LOCAL_CFLAGS += -DTW_NO_EXFAT_FUSE
 endif
+ifeq ($(TW_NO_HAPTICS), true)
+    LOCAL_CFLAGS += -DTW_NO_HAPTICS
+endif
 ifeq ($(TW_INCLUDE_JB_CRYPTO), true)
     TW_INCLUDE_CRYPTO := true
 endif
@@ -304,7 +324,7 @@ ifeq ($(TW_INCLUDE_L_CRYPTO), true)
 endif
 ifeq ($(TW_INCLUDE_CRYPTO), true)
     LOCAL_CFLAGS += -DTW_INCLUDE_CRYPTO
-    LOCAL_SHARED_LIBRARIES += libcryptfslollipop libgpt_twrp
+    LOCAL_SHARED_LIBRARIES += libcryptfsfde libgpt_twrp
     LOCAL_C_INCLUDES += external/boringssl/src/include
     ifeq ($(shell test $(PLATFORM_SDK_VERSION) -ge 24; echo $$?),0)
         TW_INCLUDE_CRYPTO_FBE := true
@@ -498,12 +518,14 @@ ifeq ($(shell test $(PLATFORM_SDK_VERSION) -ge 28; echo $$?),0)
 endif
 endif
 
-ifeq ($(shell test $(PLATFORM_SDK_VERSION) -ge 25; echo $$?),0)
+ifeq ($(shell test $(PLATFORM_SDK_VERSION) -ge 26; echo $$?),0)
     LOCAL_REQUIRED_MODULES += file_contexts_text
+else ifeq ($(shell test $(PLATFORM_SDK_VERSION) -ge 25; echo $$?),0)
+    LOCAL_ADDITIONAL_DEPENDENCIES += file_contexts_text
 endif
 
 ifeq ($(BOARD_CACHEIMAGE_PARTITION_SIZE),)
-LOCAL_REQUIRED_MODULES := recovery-persist recovery-refresh
+LOCAL_REQUIRED_MODULES += recovery-persist recovery-refresh
 endif
 
 include $(BUILD_EXECUTABLE)
@@ -778,6 +800,12 @@ ifeq ($(shell test $(PLATFORM_SDK_VERSION) -le 25; echo $$?),0)
 include $(commands_TWRP_local_path)/bootloader_message/Android.mk
 endif
 
+ifeq ($(shell test $(PLATFORM_SDK_VERSION) -ge 28; echo $$?),0)
+    include $(commands_TWRP_local_path)/mtp/ffs/Android.mk
+else
+    include $(commands_TWRP_local_path)/mtp/legacy/Android.mk
+endif
+
 ifeq ($(wildcard system/core/uncrypt/Android.mk),)
     #include $(commands_TWRP_local_path)/uncrypt/Android.mk
 endif
@@ -813,7 +841,6 @@ include $(commands_TWRP_local_path)/injecttwrp/Android.mk \
     $(commands_TWRP_local_path)/openaes/Android.mk \
     $(commands_TWRP_local_path)/toolbox/Android.mk \
     $(commands_TWRP_local_path)/twrpTarMain/Android.mk \
-    $(commands_TWRP_local_path)/mtp/Android.mk \
     $(commands_TWRP_local_path)/minzip/Android.mk \
     $(commands_TWRP_local_path)/dosfstools/Android.mk \
     $(commands_TWRP_local_path)/etc/Android.mk \
@@ -829,7 +856,7 @@ ifeq ($(shell test $(PLATFORM_SDK_VERSION) -lt 24; echo $$?),0)
 endif
 
 ifeq ($(TW_INCLUDE_CRYPTO), true)
-    include $(commands_TWRP_local_path)/crypto/lollipop/Android.mk
+    include $(commands_TWRP_local_path)/crypto/fde/Android.mk
     include $(commands_TWRP_local_path)/crypto/scrypt/Android.mk
     ifeq ($(TW_INCLUDE_CRYPTO_FBE), true)
         include $(commands_TWRP_local_path)/crypto/ext4crypt/Android.mk

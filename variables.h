@@ -17,7 +17,7 @@
 #ifndef _VARIABLES_HEADER_
 #define _VARIABLES_HEADER_
 
-#define TW_MAIN_VERSION_STR       "3.2.3"
+#define TW_MAIN_VERSION_STR       "3.3.0"
 #define TW_MAINTAINER_VERSION_STR "-codeworkx"
 #define TW_VERSION_STR TW_MAIN_VERSION_STR TW_DEVICE_VERSION TW_DATE_STR TW_MAINTAINER_VERSION_STR
 
@@ -130,6 +130,7 @@
 #define TW_MIN_SYSTEM_SIZE          "50" // minimum system size to allow a reboot
 #define TW_MIN_SYSTEM_VAR           "tw_min_system"
 #define TW_DOWNLOAD_MODE            "tw_download_mode"
+#define TW_EDL_MODE                 "tw_edl_mode"
 #define TW_IS_ENCRYPTED             "tw_is_encrypted"
 #define TW_IS_DECRYPTED             "tw_is_decrypted"
 #define TW_CRYPTO_PWTYPE            "tw_crypto_pwtype"
@@ -161,8 +162,6 @@
 #define CUSTOM_LUN_FILE "/sys/class/android_usb/android0/f_mass_storage/lun%d/file"
 #endif
 
-// For OpenRecoveryScript
-#define SCRIPT_FILE_CACHE "/cache/recovery/openrecoveryscript"
 #define SCRIPT_FILE_TMP "/tmp/openrecoveryscript"
 #define TMP_LOG_FILE "/tmp/recovery.log"
 
