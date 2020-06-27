@@ -536,7 +536,9 @@ bool verify_package_compatibility(ZipArchiveHandle package_zip) {
   }
 
   LOG(ERROR) << "Failed to verify package compatibility (result " << result << "): " << err;
-  return false;
+  // codeworkx: disable package compat verification
+  //return false;
+  return true;
 }
 
 static int really_install_package(const std::string& path, bool* wipe_cache, bool needs_mount,

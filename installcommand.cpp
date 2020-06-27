@@ -329,6 +329,8 @@ bool verify_package_compatibility(ZipWrap *zw) {
   }
 
   printf("Failed to verify package compatibility (result %i): %s\n", result, err.c_str());
-  return false;
+  // codeworkx: disable package compat verification
+  //return false;
+  return true;
 }
 #endif

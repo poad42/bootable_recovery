@@ -59,6 +59,9 @@ else
 endif
 LOCAL_CFLAGS += -DPLATFORM_SDK_VERSION=$(PLATFORM_SDK_VERSION)
 
+TW_DATE_STR := $(shell date -u +%Y%m%d)
+LOCAL_CFLAGS += -DTW_DATE_STR='"-$(TW_DATE_STR)"'
+
 LOCAL_SRC_FILES := \
     twrp.cpp \
     fixContexts.cpp \
